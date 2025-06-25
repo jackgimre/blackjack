@@ -1,13 +1,18 @@
+
+
 export const suits = ['♠', '♥', '♦', '♣'];
 export const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
-export function createDeck() {
+export function createDeck(deckCount) {
   let deck = [];
-  for (const suit of suits) {
-    for (const rank of ranks) {
-      deck.push({ suit, rank });
+  for(let i=0;i<deckCount;i++) {
+    for (const suit of suits) {
+      for (const rank of ranks) {
+        deck.push({ suit, rank });
+      }
     }
   }
+  
   deck = shuffleDeck(deck); 
   return deck;
 }
@@ -41,4 +46,16 @@ export function calculateHandValue(hand) {
     aces -= 1;
   }
   return value;
+}
+
+export function getCardValue(card) {
+  const rank = card.rank; // assuming your cards are like { suit: '♠', rank: 'A' }
+
+  if (['2', '3', '4', '5', '6'].includes(rank)) {
+    return 1;
+  } else if (['10', 'J', 'Q', 'K', 'A'].includes(rank)) {
+    return -1;
+  } else {
+    return 0;
+  }
 }

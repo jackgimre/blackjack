@@ -1,7 +1,8 @@
 import { Stack } from "expo-router";
+import { SettingsProvider } from "./settingsContext";
 
 const RootLayout = () => {
-  return <Stack 
+  return <SettingsProvider><Stack 
   screenOptions={{
     headerStyle: { backgroundColor: '#033d1d' },
     headerTintColor: '#fff',
@@ -11,7 +12,7 @@ const RootLayout = () => {
     <Stack.Screen name="index" options={{ title: 'Home' }} />
     <Stack.Screen name="game" options={{ title: 'Blackjack' }} />
     <Stack.Screen name="settings" options={{ title: 'Settings' }} />  
-  </Stack>;
+  </Stack></SettingsProvider>;
 }
 
 export default RootLayout;

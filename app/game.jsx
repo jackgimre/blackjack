@@ -1,8 +1,8 @@
-import { createContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { calculateHandValue, createDeck } from './blackjack';
+import { calculateHandValue, createDeck, getCardValue } from './blackjack';
+import { SettingsContext } from './settingsContext';
 
-export const SettingsContext = createContext();
 
 const GameScreen = () => {
     const [deck, setDeck] = useState([]);
@@ -11,11 +11,23 @@ const GameScreen = () => {
     const [isDrawing, setIsDrawing] = useState(false);
     const [gameResult, setGameResult] = useState(null);
     const [howResult, setHowResult] = useState(null);
+    const [count, setCount] = useState(0);
+
+    const { useDecks, deckCount, countCards, darkMode } = useContext(SettingsContext);
 
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+    const calculateCount = (hand) => {
+        let deltaCount = 0;
+        for (const card of hand) {
+            deltaCount += getCardValue(card);
+        }
+        let newCount = count + deltaCount;
+        setCount(newCount);
+    };
+
     useEffect(() => {
-        const newDeck = createDeck();
+        const newDeck = createDeck(deckCount);
         setDeck(newDeck);
         // Deal initial hands
         const playerInitialHand = newDeck.slice(0, 2);
@@ -24,11 +36,12 @@ const GameScreen = () => {
         setPlayerHand(playerInitialHand);
         setDealerHand(dealerInitialHand);
         // Remove dealt cards from the deck
-        setDeck(newDeck.slice(4));
-        if(calculateHandValue(playerInitialHand) === 21) {
+        if(calculateHandValue(newDeck.slice(0, 2)) == 21) {
             setGameResult("You Won!");
             setHowResult("Blackjack! :)");
         }
+        calculateCount(newDeck.slice(0, 3));
+        setDeck(newDeck.slice(3));
     }, []);
   return (
     <View style={styles.container}>
@@ -39,19 +52,32 @@ const GameScreen = () => {
                 <TouchableOpacity style={styles.overlayButton} onPress={() => {
                     setGameResult(null);
                     setHowResult(null);
-                    const newDeck = createDeck();
-                    setDeck(newDeck);
-                    const playerInitialHand = newDeck.slice(0, 2);
-                    const dealerInitialHand = newDeck.slice(2, 3);
-                    setPlayerHand(playerInitialHand);
-                    setDealerHand(dealerInitialHand);
-                    setDeck(newDeck.slice(4));
+                    let workingDeck = deck;
+                  if (workingDeck.length < 4 || !useDecks) {
+                    workingDeck = createDeck(deckCount);
+                  }
+
+                  // Deal from the workingDeck
+                  const playerInitialHand = workingDeck.slice(0, 2);
+                  const dealerInitialHand = workingDeck.slice(2, 3);
+                  calculateCount(workingDeck.slice(0, 3));
+                  const remainingDeck = workingDeck.slice(3);
+
+                  // Update state
+                  setPlayerHand(playerInitialHand);
+                  setDealerHand(dealerInitialHand);
+                  setDeck(remainingDeck);
                 }}>
                     <Text style={styles.buttonText}>Play Again</Text>
                 </TouchableOpacity>
             </View>
         )}
         <View style={styles.dealerBox}>
+          <Text style={styles.subtitle}>{deck.length} cards in deck</Text>
+          {countCards && (
+            <Text style={styles.subtitle}>
+              The count is: {count}
+            </Text>)}
             <View style={styles.dealerHand}>
                 <Text style={styles.title}>Dealer's Hand</Text>
                 {dealerHand.map((card, index) => (
@@ -75,22 +101,25 @@ const GameScreen = () => {
                 <TouchableOpacity
                 style={styles.button}
                 onPress={() => {
-                    if (deck.length > 0) {
+                    if(gameResult !== null) return;
+                    if(deck.length === 0) {
+                      const newDeck = createDeck(deckCount);
+                      setDeck(newDeck);
+                    }
                     const newCard = deck[0];
-                    const updatedHand = [...playerHand, newCard];
-                    setPlayerHand(updatedHand);
-                    setDeck(deck.slice(1));
+                      calculateCount([newCard]);
+                      const updatedHand = [...playerHand, newCard];
+                      setPlayerHand(updatedHand);
+                      setDeck(deck.slice(1));
+                      const newValue = calculateHandValue(updatedHand);
 
-                    const newValue = calculateHandValue(updatedHand);
-
-                    if (newValue > 21) {
-                        setGameResult("You Lost!");
-                        setHowResult("You exceeded 21");
-                    } else if (newValue === 21) {
-                        setGameResult("You Won!");
-                        setHowResult("Blackjack! :)");
-                    }
-                    }
+                      if (newValue > 21) {
+                          setGameResult("You Lost!");
+                          setHowResult("You exceeded 21");
+                      } else if (newValue === 21) {
+                          setGameResult("You Won!");
+                          setHowResult("Blackjack! :)");
+                      }
                 }}
                 >
                 <Text style={styles.buttonText}>Hit</Text>
@@ -99,17 +128,21 @@ const GameScreen = () => {
                 <TouchableOpacity
                     style={styles.button}
                     onPress={async () => {
+                        if(gameResult !== null) return;
                         let updatedDealerHand = [...dealerHand];
                         let updatedDeck = [...deck];
 
                         setIsDrawing(true);
                         while (
-                        calculateHandValue(updatedDealerHand) < 17 &&
-                        updatedDeck.length > 0
+                        calculateHandValue(updatedDealerHand) < 17
                         ) {
+                        if (updatedDeck.length === 0) {
+                            updatedDeck = createDeck(deckCount);
+                        }
                         await sleep(1000);
 
                         const newCard = updatedDeck.shift();
+                        calculateCount([newCard]);
                         updatedDealerHand.push(newCard);
 
                         setDealerHand([...updatedDealerHand]);
@@ -173,7 +206,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: "#666",
-    marginBottom: 20,
+    marginBottom: 4,
   },
 
   totalValue: {

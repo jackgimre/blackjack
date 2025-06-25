@@ -13,6 +13,11 @@ const HomeScreen = () => {
       }}> 
         <Text style={styles.buttonText}>Start New Game</Text>
       </TouchableOpacity>
+      <TouchableOpacity style={styles.settingsButton} onPress={()=>{
+        router.push('/settings');
+      }}> 
+        <Text style={styles.buttonText}>Settings</Text>
+      </TouchableOpacity>
     </View>
   );
 }

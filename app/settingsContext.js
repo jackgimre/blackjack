@@ -10,29 +10,57 @@ export const SettingsProvider = ({ children }) => {
   const [countCards, setCountCards] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
-  // Load saved setting
+  // Load all settings on mount
   useEffect(() => {
-    const load = async () => {
-      checkIfSaved('useDecks', false);
-      checkIfSaved('deckCount', 1);
-      checkIfSaved('countCards', false);
-      checkIfSaved('darkMode', false);
-    };
-    load();
+    (async () => {
+      try {
+        const useDecksValue = await AsyncStorage.getItem('useDecks');
+        if (useDecksValue !== null) setUseDecks(useDecksValue === 'true');
+
+        const deckCountValue = await AsyncStorage.getItem('deckCount');
+        if (deckCountValue !== null) setDeckCount(parseInt(deckCountValue, 10));
+
+        const countCardsValue = await AsyncStorage.getItem('countCards');
+        if (countCardsValue !== null) setCountCards(countCardsValue === 'true');
+
+        const darkModeValue = await AsyncStorage.getItem('darkMode');
+        if (darkModeValue !== null) setDarkMode(darkModeValue === 'true');
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      }
+    })();
   }, []);
 
-  async function checkIfSaved(settingString, defaultValue) {
-    const saved = await AsyncStorage.getItem('useDecks');
-      if (saved !== null) setDarkMode(saved === 'true');
-  }
+  // Save settings when they change
+  useEffect(() => {
+    AsyncStorage.setItem('useDecks', useDecks.toString());
+  }, [useDecks]);
 
-  // Save setting when it changes
+  useEffect(() => {
+    AsyncStorage.setItem('deckCount', deckCount.toString());
+  }, [deckCount]);
+
+  useEffect(() => {
+    AsyncStorage.setItem('countCards', countCards.toString());
+  }, [countCards]);
+
   useEffect(() => {
     AsyncStorage.setItem('darkMode', darkMode.toString());
   }, [darkMode]);
 
   return (
-    <SettingsContext.Provider value={{ darkMode, setDarkMode }}>
+    <SettingsContext.Provider
+      value={{
+        useDecks,
+        setUseDecks,
+        deckCount,
+        setDeckCount,
+        countCards,
+        setCountCards,
+        darkMode,
+        setDarkMode,
+      }}
+    >
       {children}
     </SettingsContext.Provider>
   );
